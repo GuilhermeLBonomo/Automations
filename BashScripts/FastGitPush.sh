@@ -29,8 +29,10 @@ if [ -z "$Message" ]; then
 fi
 
 if command -v git >/dev/null; then
+    git status
     git pull origin main
     git add .
+    git status
     git commit -am "$Message"
     git push origin main
     git status

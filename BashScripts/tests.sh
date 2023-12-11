@@ -1,5 +1,6 @@
-echo "Digite algo:"
-read userInput
+#!/bin/bash
 
-# Exibe o que foi digitado
+echo "Digite algo:"
+read -r userInput
+
 echo "Você digitou: $userInput"
