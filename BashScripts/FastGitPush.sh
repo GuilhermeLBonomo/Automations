@@ -20,13 +20,18 @@ else
     exit 1
 fi
 
-echo "Digite o nome do commit:"
-read -r message
+data_atual=$(date +"%Y-%m-%d")
+echo "Digite o nome do commit: [Padrão: 'Commit: $data_atual']"
+read -r Message
+
+if [ -z "$Message" ]; then
+    Message="Commit: $data_atual"
+fi
 
 if command -v git >/dev/null; then
     git pull origin main
     git add .
-    git commit -am "$message"
+    git commit -am "$Message"
     git push origin main
     git status
 else
