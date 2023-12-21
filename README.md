@@ -1,5 +1,5 @@
 # ShellScripts
-Este repositório abriga uma coleção de scripts em Bash e PowerShell para automação de tarefas.
+Este repositório abriga uma coleção de scripts em Bash, PowerShell e Python para automação de tarefas.
 
 ## Visão Geral
 A automação de tarefas é uma prática eficiente para simplificar processos e aumentar a produtividade. Neste repositório, você encontrará scripts desenvolvidos em Bash e PowerShell para diversas finalidades, desde tarefas simples até automações mais complexas.
