@@ -26,7 +26,8 @@ validate_repo() {
         echo "The path does not exist, does not contain a .git directory, or we don't have read permission."
 
         # Ask if the user wants to create a new .git directory
-        read -rp "Do you want to create a new .git directory? (y/n): " create_git
+        echo -n "Do you want to create a new .git directory? (y/n): "
+        read -r create_git
         if [ "$create_git" == "y" ]; then
             # Attempt to initialize a new Git repository
             git init "$RepositoryPath"
@@ -57,7 +58,7 @@ validate_repo() {
 get_repo_path() {
     local default_message
     default_message="[Default path: $(pwd)]"
-    echo "Enter the repository path with .git:"
+    echo -n "Enter the repository path with .git: "
     echo "$default_message"
     read -r RepositoryPath
 
@@ -89,23 +90,42 @@ show_execute_git() {
 execute_git() {
     show_execute_git
 
-    git status
-    # Ask the user if they want to merge and specify the branch
-    read -rp "Do you want to merge into a branch (y/n)? " perform_merge
-    if [ "$perform_merge" == "y" ]; then
-        read -rp "Enter the name of the target branch (default: main): " target_branch
-        target_branch=${target_branch:-main}
-        git pull --merge origin "$target_branch"
-    else
-        # If the user chooses not to merge, perform a fetch
-        git fetch origin
-    fi
+    # Ask the user if they want to use the default behavior
+    echo "Do you want to use the default behavior? (y/n): "
+    read -r use_default
 
-    git add .
-    git status
-    git commit -am "$Message"
-    git push origin main
-    git status
+    if [[ "$use_default" == "y" ]]; then
+        echo "Chegou aqui 1"
+        # Use the default behavior
+        git status
+        git pull origin main
+        git add .
+        git status
+        git commit -am "$Message"
+        git push origin main
+        git status
+    else
+        # Ask the user for branch and merge preferences
+        echo "Chegou aqui 2"
+        read -p "Enter the name of the target branch (default: main): " target_branch
+        target_branch=${target_branch:-main}
+
+        read -p "Do you want to merge into a branch (y/n)? " perform_merge
+
+        if [[ "$perform_merge" == "y" ]]; then
+            echo "Chegou aqui 3"
+            git pull --merge origin "$target_branch" --allow-unrelated-histories
+        else
+            echo "Chegou aqui 4"
+            git fetch origin
+        fi
+        echo "Chegou aqui 5"
+        git add .
+        git status
+        git commit -am "$Message"
+        git push origin "$target_branch"
+        git status
+    fi
 }
 
 # Get the repository path and check if Git is installed
@@ -113,7 +133,7 @@ command -v git >/dev/null || error "Git not found. Please install git."
 get_repo_path
 
 # Ask for the commit name
-echo "Enter the commit name: [Default: 'Commit: $current_date']"
+echo -n "Enter the commit name: [Default: 'Commit: $current_date'] "
 read -r Message
 
 # If the commit name is not provided, use the default
