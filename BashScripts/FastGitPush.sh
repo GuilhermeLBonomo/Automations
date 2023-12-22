@@ -20,16 +20,13 @@ validate_repo() {
     local default_message
     default_message="[Default path: $(pwd)]"
 
-    # Check if the .git directory exists and is readable
     while [ ! -d "$RepositoryPath/.git" ] || [ ! -r "$RepositoryPath" ]; do
         echo "Error: $default_message"
         echo "The path does not exist, does not contain a .git directory, or we don't have read permission."
 
-        # Ask if the user wants to create a new .git directory
         echo -n "Do you want to create a new .git directory? (y/n): "
         read -r create_git
         if [ "$create_git" == "y" ]; then
-            # Attempt to initialize a new Git repository
             git init "$RepositoryPath"
             git_add_origin_command="git remote add origin <repository_url>"
             echo "Git repository created. To associate it with a remote repository, use:"
@@ -42,11 +39,8 @@ validate_repo() {
         fi
     done
 
-    # Check if the .git directory is associated with a repository
     if ! git -C "$RepositoryPath" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         echo "The .git directory is not associated with a Git repository."
-
-        # Suggest a command to associate it with a remote repository
         git_add_origin_command="git remote add origin <repository_url>"
         echo "To associate it with a remote repository, use:"
         echo "$git_add_origin_command"
@@ -61,11 +55,7 @@ get_repo_path() {
     echo -n "Enter the repository path with .git: "
     echo "$default_message"
     read -r RepositoryPath
-
-    # If the path is not provided, use the current directory
     [ -z "$RepositoryPath" ] && RepositoryPath=$(pwd)
-
-    # Call the validate_repo function before trying to change to the directory
     validate_repo
 
     cd "$RepositoryPath" || error "Could not change to the provided directory."
@@ -89,14 +79,11 @@ show_execute_git() {
 # Function to perform Git operations
 execute_git() {
     show_execute_git
-
-    # Ask the user if they want to use the default behavior
     echo "Do you want to use the default behavior? (y/n): "
     read -r use_default
 
     if [[ "$use_default" == "y" ]]; then
         echo "Chegou aqui 1"
-        # Use the default behavior
         git status
         git pull origin main
         git add .
@@ -105,7 +92,6 @@ execute_git() {
         git push origin main
         git status
     else
-        # Ask the user for branch and merge preferences
         echo "Chegou aqui 2"
         read -p "Enter the name of the target branch (default: main): " target_branch
         target_branch=${target_branch:-main}

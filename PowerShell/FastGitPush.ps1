@@ -1,61 +1,153 @@
 <#
 .SYNOPSIS
-    Este script automatiza o processo de commit e push de alterações para um repositório Git.
+    This script automates the process of committing and pushing changes to a Git repository.
 
 .DESCRIPTION
-    O script realiza as seguintes ações:
-    1. Solicita o caminho do repositório com .git.
-    2. Verifica se o caminho fornecido contém um diretório .git.
-    3. Move para o diretório do repositório.
-    4. Obtém a data atual.
-    5. Solicita o nome do commit (opcional).
-    6. Executa git pull, git add, git commit, git push e git status.
-    7. Verifica se o Git está instalado.
+    The script performs the following actions:
+    1. Prompts for the repository path with .git.
+    2. Validates if the provided path contains a .git directory.
+    3. Moves to the repository directory.
+    4. Gets the current date.
+    5. Prompts for the commit name (optional).
+    6. Executes git pull, git add, git commit, git push, and git status.
+    7. Verifies if Git is installed.
 
 .NOTES
-    Nome do Script: FastGitPush.ps1
-    Autor: GuilhermeLBonomo
-    Data: 2023-12-01
+    Script Name: FastGitPush.ps1
+    Author: GuilhermeLBonomo
+    Date: 2023-12-01
 
 .EXAMPLE
     .\FastGitPush.ps1
 #>
 
-$RepositoryPath = Read-Host "Digite o caminho do repositório com .git (Padrão: $(Get-Location))"
+# Function to validate the repository path
+function Validate-Repo {
+    param (
+        [string]$RepositoryPath
+    )
 
-if (-not $RepositoryPath) {
-    $RepositoryPath = Get-Location
-}
+    $defaultMessage = "[Default path: $(Get-Location)]"
 
-if (Test-Path "$RepositoryPath\.git" -and (Test-Path -Path $RepositoryPath -PathType Container)) {
-    try {
-        Set-Location -Path $RepositoryPath -ErrorAction Stop
-    } catch {
-        Write-Host "Erro: Não temos permissão de leitura para o diretório fornecido."
-        exit 1
+    # Check if the .git directory exists and is readable
+    while (-not (Test-Path "$RepositoryPath\.git") -or -not (Test-Path $RepositoryPath) -or -not (Test-Path "$RepositoryPath\.git" -PathType Container) -or -not (Test-Path $RepositoryPath -PathType Container)) {
+        Write-Host "Error: $defaultMessage"
+        Write-Host "The path does not exist, does not contain a .git directory, or we don't have read permission."
+
+        # Ask if the user wants to create a new .git directory
+        $createGit = Read-Host "Do you want to create a new .git directory? (y/n)"
+        if ($createGit -eq "y") {
+            # Attempt to initialize a new Git repository
+            git init $RepositoryPath
+            $gitAddOriginCommand = "git remote add origin <repository_url>"
+            Write-Host "Git repository created. To associate it with a remote repository, use:"
+            Write-Host "$gitAddOriginCommand"
+            Exit
+        }
+        else {
+            $RepositoryPath = Read-Host "Enter a new path or press Enter to terminate the program"
+            if (-not $RepositoryPath) {
+                Exit
+            }
+        }
     }
-} else {
-    Write-Host "Erro: O caminho não existe ou não contém um diretório .git."
-    exit 1
+
+    # Check if the .git directory is associated with a repository
+    $isInsideWorkTree = git -C $RepositoryPath rev-parse --is-inside-work-tree 2>$null
+    if (-not $isInsideWorkTree) {
+        Write-Host "The .git directory is not associated with a Git repository."
+
+        # Suggest a command to associate it with a remote repository
+        $gitAddOriginCommand = "git remote add origin <repository_url>"
+        Write-Host "To associate it with a remote repository, use:"
+        Write-Host "$gitAddOriginCommand"
+        Exit
+    }
 }
 
-$data_atual = Get-Date -Format "yyyy-MM-dd"
-Write-Host "Digite o nome do commit (Padrão: 'Commit: $data_atual')"
-$Message = Read-Host
+# Function to get the repository path
+function Get-RepoPath {
+    $defaultMessage = "[Default path: $(Get-Location)]"
+    Write-Host "Enter the repository path with .git:"
+    Write-Host "$defaultMessage"
+    $RepositoryPath = Read-Host
 
-if (-not $Message) {
-    $Message = "Commit: $data_atual"
+    # If the path is not provided, use the current directory
+    if (-not $RepositoryPath) {
+        $RepositoryPath = Get-Location
+    }
+
+    # Call the Validate-Repo function before trying to change to the directory
+    Validate-Repo -RepositoryPath $RepositoryPath | Out-Null
+
+    Set-Location -Path $RepositoryPath
 }
 
-if (Test-Path (Get-Command git -ErrorAction SilentlyContinue)) {
-    git status
-    git pull origin main
-    git add .
-    git status
-    git commit -am $Message
-    git push origin main
-    git status
-} else {
-    Write-Host "Erro: Git não encontrado. Por favor, instale o git."
-    exit 1
+# Function to show the default behavior
+function Show-ExecuteGit {
+    Write-Host "Default behavior:"
+    Write-Host "Running git in the repository at: $(Get-Location)"
+    Write-Host "Current time: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")"
+    Write-Host "Commands to be executed:"
+    Write-Host "1. git status"
+    Write-Host "2. git pull --merge origin main --allow-unrelated-histories"
+    Write-Host "3. git add ."
+    Write-Host "4. git status"
+    Write-Host "5. git commit -am ""$Message"""
+    Write-Host "6. git push origin main"
+    Write-Host "7. git status"
 }
+
+# Function to perform Git operations
+function Execute-Git {
+    Show-ExecuteGit
+
+    # Ask the user if they want to use the default behavior
+    $useDefault = Read-Host "Do you want to use the default behavior? (y/n)"
+    
+    if ($useDefault -eq "y") {
+        # Use the default behavior
+        git status
+        git pull origin main
+        git add .
+        git status
+        git commit -am "$Message"
+        git push origin main
+        git status
+    }
+    else {
+        # Ask the user for branch and merge preferences
+        $targetBranch = Read-Host "Enter the name of the target branch (default: main)"
+        $targetBranch = $targetBranch -or "main"
+
+        $performMerge = Read-Host "Do you want to merge into a branch (y/n)?"
+        if ($performMerge -eq "y") {
+            git pull --merge origin $targetBranch --allow-unrelated-histories
+        }
+        else {
+            git fetch origin
+        }
+
+        git add .
+        git status
+        git commit -am "$Message"
+        git push origin $targetBranch
+        git status
+    }
+}
+
+# Check if Git is installed
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Host "Git not found. Please install git."
+    Exit 1
+}
+
+# Get the repository path
+Get-RepoPath
+
+# Ask for the commit name
+$Message = Read-Host "Enter the commit name: (Default: 'Commit: $current_date')"
+$Message = $Message -or "Commit: $current_date"
+
+# Perform Git operations
+Execute-Git
